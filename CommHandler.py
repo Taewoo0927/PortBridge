@@ -1,5 +1,7 @@
 import serial
 
+
+
 class PyUART:
     # To Do: Fix the way to get parity set
     def __init__(self, port, baudrate=9600, timeout=1):

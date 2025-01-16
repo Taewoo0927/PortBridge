@@ -15,10 +15,8 @@ class Py_Gui(tk.Tk):
         self.style = ttk.Style(self)
         
         try:
-            #self.tk.call("source", "forest-light.tcl")
             self.tk.call("source", "forest-dark.tcl")
             self.style.theme_use("forest-dark")
-
         except Exception as e:
             print(f"Error loading theme: {e}")
             self.style.theme_use("default")  # Fallback theme
@@ -27,38 +25,28 @@ class Py_Gui(tk.Tk):
         self.uart_handler = None
 
         # Frame
-        frame = ttk.Frame(self, width=800)
+        frame = ttk.Frame(self)
         frame.pack()
 
         # Frame - Widget frame
-        widget_frame = ttk.Labelframe(frame, text="Basic Data")
-        widget_frame.grid(row=0, column=0, padx=20, pady=10)
+        self.widget_frame = ttk.Labelframe(frame, text="Basic Data")
+        self.widget_frame.grid(row=0, column=0, padx=20, pady=10)
 
-        # Frame - Widget frame - folder address entry
-        self.port_entry = ttk.Entry(widget_frame)
-        self.port_entry.insert(0, "Port")
-        self.port_entry.bind("<FocusIn>", lambda e: self.clear_placeholder(self.port_entry, "Port"))
-        self.port_entry.bind("<FocusOut>", lambda e: self.restore_placeholder(self.port_entry, "Port"))
-        self.port_entry.grid(row=0, column=0, padx=5, pady=(0, 5), sticky="w")
-
-        # Frame - Widget frame - baud rate entry
-        self.baud_rate_entry = ttk.Entry(widget_frame)
-        self.baud_rate_entry.insert(0, "Baud Rate")
-        self.baud_rate_entry.bind("<FocusIn>", lambda e: self.clear_placeholder(self.baud_rate_entry, "Baud Rate"))
-        self.baud_rate_entry.bind("<FocusOut>", lambda e: self.restore_placeholder(self.baud_rate_entry, "Baud Rate"))
-        self.baud_rate_entry.grid(row=1, column=0, padx=5, pady=10, sticky="ew")
-
+        # Frame - Widget frame - port & baud drop menu
+        self.port_dropmenu()
+        self.baud_rate_dropmenu()
+        
         # Frame - Widget frame - Connect Port data button
-        connect_button = ttk.Button(widget_frame, text="Connect", command=self.connection_thread)
-        connect_button.grid(row=2, column=0, padx=5, pady=10, sticky="nsew")
+        self.connect_button = ttk.Button(self.widget_frame, text="Connect", command=self.connection_thread)
+        self.connect_button.grid(row=2, column=0, padx=5, pady=10, sticky="nsew")
         
         # Frame - Widget frame - Read Data button
-        read_button = ttk.Button(widget_frame, text="Read Data", command=self.read_data)
+        read_button = ttk.Button(self.widget_frame, text="Read Data", command=self.read_data)
         read_button.grid(row=3, column=0, padx=5, pady=10, sticky="nsew")
 
         # Frame - Widget frame - Extract report button
-        disconnect_report_button = ttk.Button(widget_frame, text="Disconnect", command=self.disconnection_thread)
-        disconnect_report_button.grid(row=3, column=0, padx=5, pady=10, sticky="nsew")
+        #disconnect_report_button = ttk.Button(widget_frame, text="Disconnect", command=self.disconnection_thread)
+        #disconnect_report_button.grid(row=3, column=0, padx=5, pady=10, sticky="nsew")
 
         # Frame - Widget frame - Using continuous button mode
         #self.continuous_var = tk.IntVar()
@@ -66,11 +54,11 @@ class Py_Gui(tk.Tk):
         #self.continuous_chkbox.grid(row=5, column=0, padx=5, pady=10, sticky="nsew")
 
         # Seperator
-        seperator = ttk.Separator(widget_frame)
+        seperator = ttk.Separator(self.widget_frame)
         seperator.grid(row=6, column=0, padx=(20, 20), pady=10, sticky="ew")
 
         # Frame - widget frame - output
-        self.output_box = tk.Text(widget_frame, height=4, width=3, wrap="word")
+        self.output_box = tk.Text(self.widget_frame, height=4, width=3, wrap="word")
         self.output_box.grid(row=7, column=0, padx=10, pady=10, sticky="ew")
 
         # Frame - TreeFrame
@@ -81,6 +69,15 @@ class Py_Gui(tk.Tk):
         self.input_data_frame = tk.Text(treeFrame, wrap="word")
         self.input_data_frame.grid(row=0, column=0, padx=2, pady=2, sticky="ew")
 
+    def port_dropmenu(self):
+        port_list = ['-'] + [f'COM{i}' for i in range(1, 10)]
+        self.port_obj = ttk.Combobox(self.widget_frame, values=port_list)
+        self.port_obj.grid(row=0, column=0, padx=5, pady=(0, 5), sticky="w")
+    
+    def baud_rate_dropmenu(self):
+        br_list = ['-'] + ['1200', '2400', '4800', '9600', '19200', '38400', '57600', '115200']
+        self.br_obj = ttk.Combobox(self.widget_frame, values=br_list)
+        self.br_obj.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="w")
 
     def clear_placeholder(self, entry_widget, placeholder):
         # Clear the placeholder text if it matches
@@ -102,10 +99,6 @@ class Py_Gui(tk.Tk):
         self.report_extraction_thread = threading.Thread(target=self.connection)
         self.report_extraction_thread.start()
 
-    def disconnection_thread(self):
-        self.report_extraction_thread = threading.Thread(target=self.disconnect_port)
-        self.report_extraction_thread.start()
-
     ###################################
     # Custom function for CommHandler #
     ###################################
@@ -113,24 +106,40 @@ class Py_Gui(tk.Tk):
     # Check if it connected properly
     def connection(self):
         # Retrieve port and baud rate from entries
-        port = self.port_entry.get()
-        baud_rate = self.baud_rate_entry.get()
-
-        # Validate input & Check if already connected
-        if not self.is_number([baud_rate]):
-            self.display_output("Error: Please enter a valid baud rate.")
-            return False
-
+        port = self.port_obj.get()
+        baud_rate = self.br_obj.get()
+        
         try:
             # Initialize and open UART connection
             self.uart_handler = PyUART(port, baud_rate)
             self.uart_handler.open()
 
-            if self.uart_handler.is_connect():
-                self.display_output(f"Successfully connected to port: {port} & baud rate: {baud_rate}")
-                return True
+            if self.connect_button["text"] == "Connect":
+                if self.uart_handler.is_connect(): 
+                    self.display_output(f"Successfully connected to port: {port} & baud rate: {baud_rate}")
+                    self.connect_button["text"] = "Disconnect"
+                    self.br_obj["state"] = "disable"
+                    self.port_obj["state"] = "disable"
+                    return True
+                else:
+                    Errormsg = f"Error: Failed connecting UART"
+                    mb.showerror("showerror", Errormsg)
+                    return False
+
+            elif self.connect_button["text"] == "Disconnect":
+                if self.disconnect_port():
+                    self.connect_button["text"] = "Connect"
+                    self.br_obj["state"] = "active"
+                    self.port_obj["state"] = "active"
+                    return True
+                else:
+                    Errormsg = f"Error: Failed disconnecting UART"
+                    mb.showerror("showerror", Errormsg)
+                    return False
             else:
-                raise RuntimeError("Connection failed for unknown reasons.")
+                self.display_output(f"Error entering the loop")
+
+
         except Exception as e:
             self.display_output(f"Error: {e}")
             return False
@@ -176,11 +185,14 @@ class Py_Gui(tk.Tk):
             self.uart_handler.close()
             self.display_output("Connection closed.")
 
+    # Check if uart_handler object is initialized and close
     def disconnect_port(self):
         if self.uart_handler and self.uart_handler.close():
             self.display_output("Connection closed.")
+            return True
         else:
             self.display_output("Nothing to close.")
+            return False
 
 
     def is_number(self, input_data):
