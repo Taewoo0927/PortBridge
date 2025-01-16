@@ -1,7 +1,7 @@
 import serial
 
 class PyUART:
-    def __init__(self, port, baudrate=9600, parity=serial.PARITY_NONE, timeout=1):
+    def __init__(self, port, baudrate=9600, parity="PARITY_NONE", timeout=1):
         # Initialize the UART connection.
         self._port = port
         self._baudrate = baudrate
@@ -18,18 +18,18 @@ class PyUART:
                 parity=self._parity,
                 timeout= self._timeout
             )
-            print(f"Connected to {self.port} at {self.baudrate} baud.")
+            print(f"Connected to {self._port} at {self._baudrate} baud.")
         except serial.SerialException as e:
-            print(f"Failed to open port {self.port}: {e}")
+            raise(f"Failed to open port {self._port}: {e}")
 
     def close(self):
         # Close the UART
         if self._connection and self._connection.is_open:
             self._connection.close()
-            print(f"Connection to {self.port} closed.")
+            print(f"Connection to {self._port} closed.")
     
+    # Send data, data type must be bytes
     def send(self, data):
-        # Send data via UART
         if self._connection and self._connection.is_open:
             if isinstance(data, str):
                 data = data.encode()
@@ -43,11 +43,30 @@ class PyUART:
         if self._connection and self._connection.is_open:
             try:
                 data = self._connection.readline().decode().strip()
-                print(f"Received: {data}")
-                return data
+                if data:  # Check if data is not empty
+                    print(f"Received: {data}")
+                    return data
+                else:
+                    print("No more data to read.")
+                    return None
             except Exception as e:
                 print(f"Error reading data: {e}")
                 return None
         else:
             print("Connection is not open. Unable to receive data.")
             return None
+        
+    def is_connect(self):
+        return self._connection.is_open
+    
+    def preprocess_data(self, data):
+        if isinstance(data, str):
+            return data.encode()  # Convert string to bytes
+        elif isinstance(data, int) and 0 <= data <= 255:
+            return bytes([data])  # Convert integer to single-byte bytes
+        elif isinstance(data, list) and all(0 <= i <= 255 for i in data):
+            return bytes(data)  # Convert list of integers to bytes
+        elif isinstance(data, (bytes, bytearray)):
+            return data  # Already in bytes, no conversion needed
+        else:
+            raise TypeError("Data must be str, bytes, bytearray, int, or list of int.")
