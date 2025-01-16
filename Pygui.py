@@ -49,7 +49,7 @@ class Py_Gui(tk.Tk):
         self.baud_rate_entry.grid(row=1, column=0, padx=5, pady=10, sticky="ew")
 
         # Frame - Widget frame - Connect Port data button
-        connect_button = ttk.Button(widget_frame, text="Connect Port", command=self.connection_thread)
+        connect_button = ttk.Button(widget_frame, text="Connect", command=self.connection_thread)
         connect_button.grid(row=2, column=0, padx=5, pady=10, sticky="nsew")
         
         # Frame - Widget frame - Read Data button
@@ -57,8 +57,8 @@ class Py_Gui(tk.Tk):
         read_button.grid(row=3, column=0, padx=5, pady=10, sticky="nsew")
 
         # Frame - Widget frame - Extract report button
-        #extract_report_button = ttk.Button(widget_frame, text="Extract Report", command=self.start_report_extraction_thread)
-        #extract_report_button.grid(row=4, column=0, padx=5, pady=10, sticky="nsew")
+        disconnect_report_button = ttk.Button(widget_frame, text="Disconnect", command=self.disconnection_thread)
+        disconnect_report_button.grid(row=3, column=0, padx=5, pady=10, sticky="nsew")
 
         # Frame - Widget frame - Using continuous button mode
         #self.continuous_var = tk.IntVar()
@@ -102,6 +102,10 @@ class Py_Gui(tk.Tk):
         self.report_extraction_thread = threading.Thread(target=self.connection)
         self.report_extraction_thread.start()
 
+    def disconnection_thread(self):
+        self.report_extraction_thread = threading.Thread(target=self.disconnect_port)
+        self.report_extraction_thread.start()
+
     ###################################
     # Custom function for CommHandler #
     ###################################
@@ -113,11 +117,8 @@ class Py_Gui(tk.Tk):
         baud_rate = self.baud_rate_entry.get()
 
         # Validate input & Check if already connected
-        if not self.is_number([port, baud_rate]):
-            self.display_output("Error: Please enter a valid port and baud rate.")
-            return False
-        if self.uart_handler and self.uart_handler.is_connect():
-            self.display_output(f"Already connected to port: {port} & baud rate: {baud_rate}")
+        if not self.is_number([baud_rate]):
+            self.display_output("Error: Please enter a valid baud rate.")
             return False
 
         try:
@@ -174,6 +175,12 @@ class Py_Gui(tk.Tk):
         finally:
             self.uart_handler.close()
             self.display_output("Connection closed.")
+
+    def disconnect_port(self):
+        if self.uart_handler and self.uart_handler.close():
+            self.display_output("Connection closed.")
+        else:
+            self.display_output("Nothing to close.")
 
 
     def is_number(self, input_data):

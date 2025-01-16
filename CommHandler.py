@@ -1,11 +1,12 @@
 import serial
 
 class PyUART:
-    def __init__(self, port, baudrate=9600, parity="PARITY_NONE", timeout=1):
+    # To Do: Fix the way to get parity set
+    def __init__(self, port, baudrate=9600, timeout=1):
         # Initialize the UART connection.
         self._port = port
         self._baudrate = baudrate
-        self._parity = parity
+        #self._parity = parity <- Gets error
         self._timeout = timeout
         self._connection = None
 
@@ -15,7 +16,7 @@ class PyUART:
             self._connection = serial.Serial(
                 port=self._port,
                 baudrate=self._baudrate,
-                parity=self._parity,
+                #parity=self._parity,
                 timeout= self._timeout
             )
             print(f"Connected to {self._port} at {self._baudrate} baud.")
@@ -27,6 +28,9 @@ class PyUART:
         if self._connection and self._connection.is_open:
             self._connection.close()
             print(f"Connection to {self._port} closed.")
+            return True
+        else:
+            return False
     
     # Send data, data type must be bytes
     def send(self, data):
